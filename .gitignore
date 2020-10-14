@@ -1,2 +1,4 @@
 .idea
 __pycache__
+BOT/all_nations.json
+BOT/test.py
