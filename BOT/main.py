@@ -1,5 +1,6 @@
 import os
 import time
+import asyncio
 import json
 import difflib
 import datetime
@@ -105,7 +106,7 @@ async def update():
             print("\n\nERROR HAPPENED\n")
             print(e)
 
-        time.sleep(60 * 20)
+        await asyncio.sleep(20*60)
 
 
 # run bot
