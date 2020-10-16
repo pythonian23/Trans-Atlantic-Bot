@@ -2,3 +2,5 @@
 __pycache__
 BOT/all_nations.json
 BOT/test.py
+.idea/Trans-Atlantic-Bot.iml
+.idea/modules.xml

@@ -3,11 +3,11 @@ import time
 import json
 import difflib
 import datetime
-import asyncio
-import threading
 import requests
+import random
 import discord
 from discord.ext import commands
+import crypto_bot
 
 TOKEN = os.environ.get("TRANSATLANTICBOT")
 KEY = os.environ.get("PNWKEY")
@@ -15,7 +15,8 @@ KEY = os.environ.get("PNWKEY")
 command_dict = {
     "help": "Lists the commands and their descriptions",
     "help_commands": "ALIAS: help",
-    "city": "Gets information about the specified city. URL and ID are both accepted.",
+    "city": "Gets information about the specified city.\n\tUsage: URL and ID are both accepted.",
+    "crypto": "🔐 MILITARY GRADE ENCRYPTION 🔐\n\tUsage: !crypto {ENC or DEC(encrypt or decrypt)} {TEXT TO CRYPT} {ID} {PASSWORD} {PSWD2 (optional)}"
 }
 
 
@@ -50,7 +51,7 @@ async def update_war():
     new = req("wars?alliance_id=7536")
     print(f"Recieved Data - {time.time() - start_time} secs")
     if "success" in new.keys():
-        lastcheck = datetime.datetime.utcnow() - datetime.timedelta(minutes=21)
+        lastcheck = datetime.datetime.utcnow() - datetime.timedelta(hours=0, minutes=21)
         wars = new["wars"]
         war_time = datetime.datetime.strptime(wars[0]["date"][:19], "%Y-%m-%dT%X")
         war = 0
@@ -94,20 +95,25 @@ async def update_nations():
     print(f"Waiting for next update - {time.time() - start_time} secs")
 
 
-def update():
+async def update():
+    await client.wait_until_ready()
     while True:
-        asyncio.run(update_war())
-        asyncio.run(update_nations())
+        try:
+            await update_war()
+            await update_nations()
+        except Exception as e:
+            print("\n\nERROR HAPPENED\n")
+            print(e)
 
         time.sleep(60 * 20)
-
-
-updater = threading.Thread(target=update, daemon=True)
 
 
 # run bot
 client = commands.Bot(command_prefix=("^", "!", "also,\n", "also, ", "tst!"))
 client.remove_command("help")
+
+
+client.loop.create_task(update())
 
 
 @client.event
@@ -117,8 +123,6 @@ async def on_ready():
         activity=discord.Game(name="P&W")
     )
     print("BOT READY")
-
-    updater.start()
 
 
 @client.command()
@@ -144,6 +148,30 @@ async def city(ctx, *c_id):
     emb = discord.Embed(
         title=f"{theCity['name']} - [{theCity['cityid']}]",
         description=dict_to_string(theCity),
+        color=discord.Color(0x00ff00)
+    )
+    emb.set_footer(text=f"P&W bot for ANYONE, unlike SOME OTHER BOT  -  Requested by {ctx.author.name}")
+
+    await ctx.send(embed=emb)
+    return
+
+
+@client.command()
+async def crypto(ctx, enc, text, iv, password, salt="Yenigma-2"):
+    random.seed(iv)
+    iv = random.getrandbits(256)
+    random.seed()
+    crypt = crypto_bot.Crypt(password, salt, iv)
+    if enc == "ENC":
+        txt = crypt.encrypt(text)
+    elif enc == "DEC":
+        txt = crypt.decrypt(text)
+    else:
+        txt = "You got something wrong: try ENC or DEC"
+
+    emb = discord.Embed(
+        title="Encryption",
+        description=f"```css\n{txt}\n```",
         color=discord.Color(0x00ff00)
     )
     emb.set_footer(text=f"P&W bot for ANYONE, unlike SOME OTHER BOT  -  Requested by {ctx.author.name}")
