@@ -35,15 +35,6 @@ def dict_to_string(d):
     return f'```yml\n{newline.join((f"{key}: {value}" for key, value in d.items()))}\n```'
 
 
-async def get_nation(ctx, n_id):
-    if not n_id.isdigit():
-        if n_id.startswith("http"):
-            n_id = n_id[n_id.find("=") + 1].rstrip("/")
-        else:
-            pass
-    return n_id
-
-
 # update
 async def update_war():
     start_time = time.time()
@@ -55,10 +46,10 @@ async def update_war():
         lastcheck = datetime.datetime.utcnow() - datetime.timedelta(hours=0, minutes=21)
         wars = new["wars"]
         war_time = datetime.datetime.strptime(wars[0]["date"][:19], "%Y-%m-%dT%X")
-        war = 0
+        curr_war = 0
         while war_time >= lastcheck:
-            current_war = wars[war]
-            war_time = datetime.datetime.strptime(wars[war + 1]["date"][:19], "%Y-%m-%dT%X")
+            current_war = wars[curr_war]
+            war_time = datetime.datetime.strptime(wars[curr_war + 1]["date"][:19], "%Y-%m-%dT%X")
             if current_war["attackerAA"] in ("Atlantian Council", "Atlantian Council Applicant"):
                 defense_channel = await client.fetch_channel(717536088201363496)
             else:
@@ -68,13 +59,17 @@ async def update_war():
 
             emb = discord.Embed(
                 title="WAR REPORT",
-                description=dict_to_string(spec_war),
+                description=dict_to_string(spec_war["war"][0]),
                 color=discord.Color(0x00ff00)
             )
-            emb.set_footer(text=f"P&W bot for ANYONE, unlike SOME OTHER BOT  -  Requested by The Atlantian Council")
+            emb.set_footer(
+                icon_url="https://ibb.co/0Qnh1JF",
+                text=f"P&W bot for ANYONE, unlike SOME OTHER BOT  -  Requested by The Atlantian Council"
+            )
 
-            await defense_channel.send(embed=emb)
-            war += 1
+            if spec_war["war"][0]["defender_alliance_name"] is not None:
+                await defense_channel.send(embed=emb)
+            curr_war += 1
         print(f"Update Success - {time.time() - start_time} secs")
     else:
         print(f"Upate Failure - {time.time() - start_time} secs")
@@ -106,13 +101,12 @@ async def update():
             print("\n\nERROR HAPPENED\n")
             print(e)
 
-        await asyncio.sleep(20*60)
+        await asyncio.sleep(20 * 60)
 
 
 # run bot
 client = commands.Bot(command_prefix=("^", "!", "also,\n", "also, ", "tst!"))
 client.remove_command("help")
-
 
 client.loop.create_task(update())
 
@@ -138,7 +132,10 @@ async def city(ctx, *c_id):
                 description=f"Your format was wrong, and I couldn't understand it. Try a link or an ID",
                 color=discord.Color(0x00ff00)
             )
-            emb.set_footer(text=f"P&W bot for ANYONE, unlike SOME OTHER BOT  -  Requested by {ctx.author.name}")
+            emb.set_footer(
+                icon_url="https://ibb.co/0Qnh1JF",
+                text=f"P&W bot for ANYONE, unlike SOME OTHER BOT  -  Requested by {ctx.author.name}"
+            )
 
             await ctx.send(embed=emb)
             return
@@ -151,7 +148,10 @@ async def city(ctx, *c_id):
         description=dict_to_string(theCity),
         color=discord.Color(0x00ff00)
     )
-    emb.set_footer(text=f"P&W bot for ANYONE, unlike SOME OTHER BOT  -  Requested by {ctx.author.name}")
+    emb.set_footer(
+        icon_url="https://ibb.co/0Qnh1JF",
+        text=f"P&W bot for ANYONE, unlike SOME OTHER BOT  -  Requested by {ctx.author.name}"
+    )
 
     await ctx.send(embed=emb)
     return
@@ -175,15 +175,35 @@ async def crypto(ctx, enc, text, iv, password, salt="Yenigma-2"):
         description=f"```css\n{txt}\n```",
         color=discord.Color(0x00ff00)
     )
-    emb.set_footer(text=f"P&W bot for ANYONE, unlike SOME OTHER BOT  -  Requested by {ctx.author.name}")
+    emb.set_footer(
+        icon_url="https://ibb.co/0Qnh1JF",
+        text=f"P&W bot for ANYONE, unlike SOME OTHER BOT  -  Requested by {ctx.author.name}"
+    )
 
     await ctx.send(embed=emb)
     return
 
 
 @client.command()
-async def military(ctx, n_id):
-    pass
+async def war(ctx, w_id):
+    if w_id.startswith("http"):
+        w_id = w_id[w_id.find("=") + 1:].rstrip("/")
+    else:
+        w_id = int(w_id)
+
+    req_war = req(f"war/{w_id}", "/&")["war"][0]
+
+    emb = discord.Embed(
+        title="War report",
+        description=dict_to_string(req_war),
+        color=discord.Color(0x00ff00)
+    )
+    emb.set_footer(
+        icon_url="https://ibb.co/0Qnh1JF",
+        text=f"P&W bot for ANYONE, unlike SOME OTHER BOT  -  Requested by {ctx.author.name}"
+    )
+
+    await ctx.send(embed=emb)
 
 
 @client.command()
@@ -204,7 +224,10 @@ async def help_commands(ctx, spec_command=None):
             description=f"```yml\n{joined}\n```",
             color=discord.Color(0x00ff00)
         )
-        emb.set_footer(text=f"P&W bot for ANYONE, unlike SOME OTHER BOT  -  Requested by {ctx.author.name}")
+        emb.set_footer(
+            icon_url="https://ibb.co/0Qnh1JF",
+            text=f"P&W bot for ANYONE, unlike SOME OTHER BOT  -  Requested by {ctx.author.name}"
+        )
 
         await ctx.send(embed=emb)
         return
@@ -221,7 +244,10 @@ async def help_commands(ctx, spec_command=None):
                     color=discord.Color(0x00ff00)
                 )
                 emb.set_footer(
-                    text=f"P&W bot for ANYONE, unlike SOME OTHER BOT  -  Requested by {ctx.author.name}")
+
+                    icon_url="https://ibb.co/0Qnh1JF",
+                    text=f"P&W bot for ANYONE, unlike SOME OTHER BOT  -  Requested by {ctx.author.name}"
+                )
 
                 await ctx.send(embed=emb)
                 return
@@ -232,7 +258,10 @@ async def help_commands(ctx, spec_command=None):
             description=txt,
             color=discord.Color(0x00ff00)
         )
-        emb.set_footer(text=f"P&W bot for ANYONE, unlike SOME OTHER BOT  -  Requested by {ctx.author.name}")
+        emb.set_footer(
+            icon_url="https://ibb.co/0Qnh1JF",
+            text=f"P&W bot for ANYONE, unlike SOME OTHER BOT  -  Requested by {ctx.author.name}"
+        )
 
         await ctx.send(embed=emb)
         return
