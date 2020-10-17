@@ -67,7 +67,7 @@ async def update_war():
                 text=f"P&W bot for ANYONE, unlike SOME OTHER BOT  -  Requested by The Atlantian Council"
             )
 
-            if spec_war["war"][0]["defender_alliance_name"] is not None:
+            if spec_war["war"][0]["defender_alliance_name"] != "None":
                 await defense_channel.send(embed=emb)
             curr_war += 1
         print(f"Update Success - {time.time() - start_time} secs")
