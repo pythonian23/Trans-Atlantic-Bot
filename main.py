@@ -61,7 +61,7 @@ async def update_war():
     new = req("wars?alliance_id=7536")
     print(f"Recieved Data - {time.time() - start_time} secs")
     if "success" in new.keys():
-        lastcheck = datetime.datetime.utcnow() - datetime.timedelta(hours=48, minutes=21)
+        lastcheck = datetime.datetime.utcnow() - datetime.timedelta(hours=0, minutes=21)
         wars = new["wars"]
         war_time = datetime.datetime.strptime(wars[0]["date"][:19], "%Y-%m-%dT%X")
         curr_war = 0
