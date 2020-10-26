@@ -1,4 +1,0 @@
-requests~=2.24.0
-discord.py~=1.5.0
-pyaes~=1.6.1
-pbkdf2~=1.3
