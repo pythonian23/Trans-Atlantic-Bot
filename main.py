@@ -189,6 +189,7 @@ async def on_ready():
 
 @client.event
 async def on_message(message):
+    await client.process_commands(message)
     if message.author == client.user:
         return
 
@@ -226,7 +227,7 @@ async def on_message(message):
 
 @client.event
 async def on_typing(channel, user, _):
-    if random.random() < 0.075:
+    if random.random() < 0.05:
         await channel.send(
             f"Hey, come look at this fool, <@{user.id}>, who is typing a very **LONG** message! What a stuck-up asshole! What does he/she do better than any of us that makes him/her write a long message?")
 

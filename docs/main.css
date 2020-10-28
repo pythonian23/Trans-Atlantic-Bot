@@ -1,0 +1,24 @@
+html {
+    font-family: monospace;
+    height: 100%;
+    background: repeating-linear-gradient(
+        #000500,
+        #000500 10px,
+        #000a00 10px,
+        #000a00 20px
+    );
+    background-repeat: repeat;
+    color: #0f0;
+}
+
+#main-head {
+    text-align: center;
+    background: radial-gradient(#000, #020);
+    width: 100%;
+    position: fixed;
+    top: 0px;
+}
+
+h1 {
+    font-size: 48px;
+}
