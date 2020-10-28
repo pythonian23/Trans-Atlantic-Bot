@@ -6,7 +6,9 @@ import asyncio
 import json
 import difflib
 import datetime
-import requests
+import traceback
+import aiohttp
+import aiofiles
 import random
 import discord
 from discord.ext import commands
@@ -39,13 +41,18 @@ morse = {'A': '.-', 'B': '-...',
          '(': '-.--.', ')': '-.--.-'}
 
 
-def req(loc, key_provider=None):
+async def req(loc, key_provider=None):
     if key_provider is not None:
-        return requests.get(f"https://politicsandwar.com/api/{loc}{key_provider}key={KEY}").json()
-    if "=" in loc:
-        return requests.get(f"https://politicsandwar.com/api/{loc}&key={KEY}").json()
+        url = f"https://politicsandwar.com/api/{loc}{key_provider}key={KEY}"
+    elif "=" in loc:
+        url = f"https://politicsandwar.com/api/{loc}&key={KEY}"
     else:
-        return requests.get(f"https://politicsandwar.com/api/{loc}/?key={KEY}").json()
+        url = f"https://politicsandwar.com/api/{loc}/?key={KEY}"
+
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as response:
+            res = await response.text()
+            return json.loads(res)
 
 
 def dict_to_string(d):
@@ -58,10 +65,10 @@ async def update_war():
     start_time = time.time()
     print("\nWAR")
     print(f"Update Started - 0 secs")
-    new = req("wars?alliance_id=7536")
+    new = await req("wars?alliance_id=7536")
     print(f"Recieved Data - {time.time() - start_time} secs")
     if "success" in new.keys():
-        lastcheck = datetime.datetime.utcnow() - datetime.timedelta(hours=0, minutes=21)
+        lastcheck = datetime.datetime.utcnow() - datetime.timedelta(hours=0, minutes=5)
         wars = new["wars"]
         war_time = datetime.datetime.strptime(wars[0]["date"][:19], "%Y-%m-%dT%X")
         curr_war = 0
@@ -73,10 +80,10 @@ async def update_war():
             else:
                 defense_channel = await client.fetch_channel(717815077624872971)
 
-            spec_war = req(f"war/{current_war['warID']}", "/&")
+            spec_war = await req(f"war/{current_war['warID']}", "/&")
 
-            attacker = req(f"nation/id={spec_war['war'][0]['aggressor_id']}")
-            defender = req(f"nation/id={spec_war['war'][0]['defender_id']}")
+            attacker = await req(f"nation/id={spec_war['war'][0]['aggressor_id']}")
+            defender = await req(f"nation/id={spec_war['war'][0]['defender_id']}")
 
             advantage = (
                 ("soldiers", int(attacker["soldiers"]) - int(defender["soldiers"])),
@@ -147,11 +154,11 @@ async def update_nations():
     start_time = time.time()
     print("\nNATION")
     print(f"Update Started - 0 secs")
-    with open("all_nations.json", "w") as nations:
-        new = req("nations")
+    async with aiofiles.open("all_nations.json", mode="w") as nations:
+        new = await req("nations")
         print(f"Recieved Data - {time.time() - start_time} secs")
         if "success" in new.keys():
-            json.dump(new, nations)
+            await nations.write(json.dumps(new))
             print(f"Update Success - {time.time() - start_time} secs")
         else:
             print(f"Upate Failure - {time.time() - start_time} secs")
@@ -166,9 +173,9 @@ async def update():
             await update_nations()
         except Exception as e:
             print("\n\nERROR HAPPENED\n")
-            print(e)
+            traceback.print_exc()
 
-        await asyncio.sleep(20 * 60)
+        await asyncio.sleep(5 * 60)
 
 
 # run bot
@@ -184,7 +191,7 @@ async def on_ready():
         status=discord.Status.online,
         activity=discord.Game(name="P&W")
     )
-    print("BOT READY")
+    print("---===≡≡≡BOT READY≡≡≡===---")
 
 
 @client.event
@@ -254,7 +261,7 @@ async def city(ctx, *c_id):
             await ctx.send(embed=emb)
             return
 
-    theCity = req(f"city/id={c_id}")
+    theCity = await req(f"city/id={c_id}")
     if "error" in theCity.keys():
         theCity["name"], theCity["cityid"] = "CITY NOT FOUND", c_id
     emb = discord.Embed(
@@ -285,8 +292,8 @@ async def crypto(ctx, enc, text, iv, password, salt="Yenigma-2"):
         txt = "You got something wrong: try ENC or DEC"
 
     emb = discord.Embed(
-        title="Encryption",
-        description=f"```css\n{txt}\n```",
+        title="Encryption" if enc == "ENC" else "Decryption",
+        description=f"```apache\n{txt}\n```",
         color=discord.Color(0x00ff00)
     )
     emb.set_footer(
@@ -305,7 +312,7 @@ async def war(ctx, w_id):
     else:
         w_id = int(w_id)
 
-    req_war = req(f"war/{w_id}", "/&")["war"][0]
+    req_war = await req(f"war/{w_id}", "/&")["war"][0]
 
     emb = discord.Embed(
         title="War report",

@@ -1,13 +1,13 @@
-from Cryptodome.Random import get_random_bytes
-from Cryptodome.Cipher import AES
-from math import ceil
+import asyncio
+import aiohttp
+import json
 
 
-cryptor = AES.new(get_random_bytes(32), AES.MODE_CBC)
+async def a():
+    async with aiohttp.ClientSession() as session:
+        async with session.get('https://jsonplaceholder.typicode.com/todos/1') as response:
+            b = await response.text()
+            print(json.loads(b))
 
 
-def encode(txt: str, length=32):
-    return txt.rjust(ceil(len(txt)/length)*length, " ").encode("ascii")
-
-
-print(cryptor.decrypt(cryptor.encrypt(encode("ok"))))
+asyncio.run(a())
