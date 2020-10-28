@@ -293,7 +293,7 @@ async def crypto(ctx, enc, text, iv, password, salt="Yenigma-2"):
 
     emb = discord.Embed(
         title="Encryption" if enc == "ENC" else "Decryption",
-        description=f"```apache\n{txt}\n```",
+        description=f"```\n{txt}\n```",
         color=discord.Color(0x00ff00)
     )
     emb.set_footer(
