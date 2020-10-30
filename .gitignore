@@ -4,3 +4,5 @@ BOT/all_nations.json
 BOT/test.py
 .idea/Trans-Atlantic-Bot.iml
 .idea/modules.xml
+all_nations.json
+*.json

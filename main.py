@@ -75,12 +75,19 @@ async def update_war():
         while war_time >= lastcheck:
             current_war = wars[curr_war]
             war_time = datetime.datetime.strptime(wars[curr_war + 1]["date"][:19], "%Y-%m-%dT%X")
+            if current_war["defenderAA"] == "None":
+                curr_war += 1
+                continue
             if current_war["attackerAA"] in ("Atlantian Council", "Atlantian Council Applicant"):
                 defense_channel = await client.fetch_channel(717536088201363496)
             else:
                 defense_channel = await client.fetch_channel(717815077624872971)
 
+            tab = "　" * 2
+
             spec_war = await req(f"war/{current_war['warID']}", "/&")
+
+            print("not skipped")
 
             attacker = await req(f"nation/id={spec_war['war'][0]['aggressor_id']}")
             defender = await req(f"nation/id={spec_war['war'][0]['defender_id']}")
@@ -127,12 +134,18 @@ async def update_war():
             if len(advantage_txt[2]):
                 adv_txt += f"The two are equal in {advantage_txt[2]}"
 
-            tab = "　" * 2
+            score_comp = f"\n🗒`  Category  |  Attacker  |  Defender  |` "
+            compare = ("🎖score", "🏙cities", "🪖soldiers", "🚛tanks", "✈aircraft", "🚢ships", "🚀missiles", "☢nukes")
 
-            info_text = f'**{tab}[{attacker["prename"]} __{attacker["name"]}__](https://politicsandwar.com/nation/id={attacker["nationid"]}) of [__{attacker["alliance"]}__](https://politicsandwar.com/alliance/id={attacker["allianceid"]}) has attacked [{defender["prename"]} __{defender["name"]}__](https://politicsandwar.com/nation/id={defender["nationid"]}) of [__{defender["alliance"]}__](https://politicsandwar.com/alliance/id={defender["allianceid"]}) for the reason, *{spec_war["war"][0]["war_reason"]}*\n{tab}{adv_txt}**'
+            for data in compare:
+                score_comp += f"\n{data[0]}` {data[1:].ljust(10)} | {str(attacker[data[1:]]).rjust(10)} | {str(defender[data[1:]]).ljust(10)} |`"
+
+            links = f"\n⚔`War       `: https://politicsandwar.com/nation/war/timeline/war={current_war['warID']}\n🗡`Attacker  `: https://politicsandwar.com/nation/id={attacker['nationid']}\n🛡`Defender  `: https://politicsandwar.com/nation/id={defender['nationid']}"
+
+            info_text = f'**{tab}[{attacker["prename"]} __{attacker["name"]}__](https://politicsandwar.com/nation/id={attacker["nationid"]}) of [__{attacker["alliance"]}__](https://politicsandwar.com/alliance/id={attacker["allianceid"]}) has attacked [{defender["prename"]} __{defender["name"]}__](https://politicsandwar.com/nation/id={defender["nationid"]}) of [__{defender["alliance"]}__](https://politicsandwar.com/alliance/id={defender["allianceid"]}) for the reason, *{spec_war["war"][0]["war_reason"]}*\n{tab}{adv_txt}.**\n\n**__RAW DATA__**\n{score_comp}\n\n**__LINKS__**\n{links}'
 
             emb = discord.Embed(
-                title="WAR REPORT",
+                title="⚔WAR REPORT⚔",
                 description=info_text,
                 color=discord.Color(0x00ff00)
             )
@@ -141,8 +154,7 @@ async def update_war():
                 text=f"P&W bot for ANYONE, unlike SOME OTHER BOT  -  Requested by The Atlantian Council"
             )
 
-            if spec_war["war"][0]["defender_alliance_name"] != "None":
-                await defense_channel.send(embed=emb)
+            await defense_channel.send(embed=emb)
             curr_war += 1
         print(f"Update Success - {time.time() - start_time} secs")
     else:
@@ -171,7 +183,7 @@ async def update():
         try:
             await update_war()
             await update_nations()
-        except Exception as e:
+        except Exception:
             print("\n\nERROR HAPPENED\n")
             traceback.print_exc()
 
@@ -205,7 +217,7 @@ async def on_message(message):
                "ignores",
                "scoffs")
 
-    if 749219251344375908 in message.raw_mentions:
+    if 761905748585742366 in message.raw_mentions:
         if ("my" in message.content) and ("birthday" in message.content):
             await message.channel.send(f"Really? Happy Birthday, <@{message.author.id}>!")
             return
@@ -228,8 +240,13 @@ async def on_message(message):
             await message.channel.send("**HEY!** What did you ping me for?")
             await message.channel.send(f"<@{message.author.id}>")
 
-    if random.random() < 0.05:
+    if random.random() < 0.03:
         await message.channel.send(f"*{random.choice(sarcasm)}*")
+
+    if random.random() < 0.01220703125:
+        await message.channel.send(":sparkles: You found a shiny Pokémon! :sparkles:")
+        await asyncio.sleep(1)
+        await message.channel.send(":skull_crossbones: It killed you and ran away. :skull_crossbones:")
 
 
 @client.event
@@ -327,9 +344,9 @@ async def war(ctx, w_id):
     await ctx.send(embed=emb)
 
 
-@client.command()
+@client.command(name="depo")
 async def depo(ctx, *args):
-    ctx.send("`!depo`? More like `!debt`")
+    await ctx.send("`!depo`? More like `!debt`")
 
 
 @client.command(name="help", aliases=["help_commands"])
@@ -365,7 +382,6 @@ async def help_commands(ctx, spec_command=None):
                     color=discord.Color(0x00ff00)
                 )
                 emb.set_footer(
-
                     icon_url="https://i.ibb.co/QXJrhmC/Atlantic-Council.png",
                     text=f"P&W bot for ANYONE, unlike SOME OTHER BOT  -  Requested by {ctx.author.name}"
                 )
