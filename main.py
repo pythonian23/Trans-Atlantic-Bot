@@ -13,6 +13,7 @@ import random
 import discord
 from discord.ext import commands
 import crypto_bot
+from math import *
 
 TOKEN = os.environ.get("TRANSATLANTICBOT")
 KEY = os.environ.get("PNWKEY")
@@ -39,6 +40,8 @@ morse = {'A': '.-', 'B': '-...',
          '0': '-----', ', ': '--..--', '.': '.-.-.-',
          '?': '..--..', '/': '-..-.', '-': '-....-',
          '(': '-.--.', ')': '-.--.-'}
+
+tab = "　" * 2
 
 
 async def req(loc, key_provider=None):
@@ -83,11 +86,7 @@ async def update_war():
             else:
                 defense_channel = await client.fetch_channel(717815077624872971)
 
-            tab = "　" * 2
-
             spec_war = await req(f"war/{current_war['warID']}", "/&")
-
-            print("not skipped")
 
             attacker = await req(f"nation/id={spec_war['war'][0]['aggressor_id']}")
             defender = await req(f"nation/id={spec_war['war'][0]['defender_id']}")
@@ -140,9 +139,19 @@ async def update_war():
             for data in compare:
                 score_comp += f"\n{data[0]}` {data[1:].ljust(10)} | {str(attacker[data[1:]]).rjust(10)} | {str(defender[data[1:]]).ljust(10)} |`"
 
-            links = f"\n⚔`War       `: https://politicsandwar.com/nation/war/timeline/war={current_war['warID']}\n🗡`Attacker  `: https://politicsandwar.com/nation/id={attacker['nationid']}\n🛡`Defender  `: https://politicsandwar.com/nation/id={defender['nationid']}"
+            a_col = "diff" if int(current_war["aggressor_resistance"]) < 33 else "fix"
+            d_col = "diff" if int(current_war["defender_resistance"]) < 33 else "fix"
+            if int(current_war["aggressor_resistance"]) > 75:
+                a_col = "yml"
+            if int(current_war["defender_resistance"]) > 75:
+                d_col = "yml"
+            resist = f"**Attacker**```{a_col}\n---≡≡≡{''.join(['|' for _ in range(0, int(int(current_war['aggressor_resistance'])//2.5))]).center(40, ' ')}≡≡≡---\n```\n**Defender**```{d_col}\n---≡≡≡{''.join(['|' for _ in range(0, int(int(current_war['defender_resistance'])//2.5))]).center(40, ' ')}≡≡≡---\n```\n"
 
-            info_text = f'**{tab}[{attacker["prename"]} __{attacker["name"]}__](https://politicsandwar.com/nation/id={attacker["nationid"]}) of [__{attacker["alliance"]}__](https://politicsandwar.com/alliance/id={attacker["allianceid"]}) has attacked [{defender["prename"]} __{defender["name"]}__](https://politicsandwar.com/nation/id={defender["nationid"]}) of [__{defender["alliance"]}__](https://politicsandwar.com/alliance/id={defender["allianceid"]}) for the reason, *{spec_war["war"][0]["war_reason"]}*\n{tab}{adv_txt}.**\n\n**__RAW DATA__**\n{score_comp}\n\n**__LINKS__**\n{links}'
+            print(len(''.join(['|' for _ in range(int(current_war['defender_resistance']), 4)]).center(20, ' ')))
+
+            links = f"\n⚔`War       `: https://politicsandwar.com/nation/war/timeline/war={current_war['war_id']}\n🗡`Attacker  `: https://politicsandwar.com/nation/id={attacker['nationid']}\n🛡`Defender  `: https://politicsandwar.com/nation/id={defender['nationid']}"
+
+            info_text = f'**{tab}[{attacker["prename"]} __{attacker["name"]}__](https://politicsandwar.com/nation/id={attacker["nationid"]}) of [__{attacker["alliance"]}__](https://politicsandwar.com/alliance/id={attacker["allianceid"]}) has attacked [{defender["prename"]} __{defender["name"]}__](https://politicsandwar.com/nation/id={defender["nationid"]}) of [__{defender["alliance"]}__](https://politicsandwar.com/alliance/id={defender["allianceid"]}) for the reason, *{spec_war["war"][0]["war_reason"]}*\n{tab}{adv_txt}.**\n\n**__RESISTANCE__**\n{resist}\n\n**__RAW DATA__**\n{score_comp}\n\n**__LINKS__**\n{links}'
 
             emb = discord.Embed(
                 title="⚔WAR REPORT⚔",
@@ -323,22 +332,93 @@ async def crypto(ctx, enc, text, iv, password, salt="Yenigma-2"):
 
 
 @client.command()
+async def calc(ctx, *args):
+    await ctx.send(eval(" ".join(args), {}, {}))
+
+
+@client.command()
 async def war(ctx, w_id):
     if w_id.startswith("http"):
         w_id = w_id[w_id.find("=") + 1:].rstrip("/")
     else:
         w_id = int(w_id)
 
-    req_war = await req(f"war/{w_id}", "/&")["war"][0]
+    spec_war = await req(f"war/{w_id}", "/&")
+    current_war = spec_war["war"][0]
+
+    attacker = await req(f"nation/id={spec_war['war'][0]['aggressor_id']}")
+    defender = await req(f"nation/id={spec_war['war'][0]['defender_id']}")
+
+    advantage = (
+        ("soldiers", int(attacker["soldiers"]) - int(defender["soldiers"])),
+        ("tanks", int(attacker["tanks"]) - int(defender["tanks"])),
+        ("aircraft", int(attacker["aircraft"]) - int(defender["aircraft"])),
+        ("ships", int(attacker["ships"]) - int(defender["ships"])),
+        ("missiles", int(attacker["missiles"]) - int(defender["missiles"])),
+        ("nukes", int(attacker["nukes"]) - int(defender["nukes"]))
+    )
+
+    a_adv = []
+    d_adv = []
+    n_adv = []
+
+    for adv in advantage:
+        if adv[1] > 0:
+            a_adv.append(adv[0])
+        elif adv[1] < 0:
+            d_adv.append(adv[0])
+        else:
+            n_adv.append(adv[0])
+
+    advantage_txt = (
+        ", ".join(a_adv),
+        ", ".join(d_adv),
+        ", ".join(n_adv)
+    )
+
+    adv_txt = ""
+
+    if len(advantage_txt[0]):
+        adv_txt += f"The attacker is strong in {advantage_txt[0]}, "
+    else:
+        adv_txt += "The attacker has no advantages, "
+
+    if len(advantage_txt[1]):
+        adv_txt += f"while the defender is strong in {advantage_txt[1]}. "
+    else:
+        adv_txt += "while the defender has no advantages. "
+
+    if len(advantage_txt[2]):
+        adv_txt += f"The two are equal in {advantage_txt[2]}"
+
+    score_comp = f"\n🗒`  Category  |  Attacker  |  Defender  |` "
+    compare = ("🎖score", "🏙cities", "🪖soldiers", "🚛tanks", "✈aircraft", "🚢ships", "🚀missiles", "☢nukes")
+
+    for data in compare:
+        score_comp += f"\n{data[0]}` {data[1:].ljust(10)} | {str(attacker[data[1:]]).rjust(10)} | {str(defender[data[1:]]).ljust(10)} |`"
+    
+    a_col = "diff" if int(current_war["aggressor_resistance"]) < 33 else "fix"
+    d_col = "diff" if int(current_war["defender_resistance"]) < 33 else "fix"
+    if int(current_war["aggressor_resistance"]) > 75:
+        a_col = "yml"
+    if int(current_war["defender_resistance"]) > 75:
+        d_col = "yml"
+    resist = f"**Attacker**```{a_col}\n---≡≡≡{''.join(['|' for _ in range(0, int(int(current_war['aggressor_resistance'])//2.5))]).center(40, ' ')}≡≡≡---\n```\n**Defender**```{d_col}\n---≡≡≡{''.join(['|' for _ in range(0, int(int(current_war['defender_resistance'])//2.5))]).center(40, ' ')}≡≡≡---\n```\n"
+
+    print(len(''.join(['|' for _ in range(int(current_war['defender_resistance']), 4)]).center(20, ' ')))
+
+    links = f"\n⚔`War       `: https://politicsandwar.com/nation/war/timeline/war={current_war['war_id']}\n🗡`Attacker  `: https://politicsandwar.com/nation/id={attacker['nationid']}\n🛡`Defender  `: https://politicsandwar.com/nation/id={defender['nationid']}"
+
+    info_text = f'**{tab}[{attacker["prename"]} __{attacker["name"]}__](https://politicsandwar.com/nation/id={attacker["nationid"]}) of [__{attacker["alliance"]}__](https://politicsandwar.com/alliance/id={attacker["allianceid"]}) has attacked [{defender["prename"]} __{defender["name"]}__](https://politicsandwar.com/nation/id={defender["nationid"]}) of [__{defender["alliance"]}__](https://politicsandwar.com/alliance/id={defender["allianceid"]}) for the reason, *{spec_war["war"][0]["war_reason"]}*\n{tab}{adv_txt}.**\n\n**__RESISTANCE__**\n{resist}\n\n**__RAW DATA__**\n{score_comp}\n\n**__LINKS__**\n{links}'
 
     emb = discord.Embed(
-        title="War report",
-        description=dict_to_string(req_war),
+        title="⚔WAR REPORT⚔",
+        description=info_text,
         color=discord.Color(0x00ff00)
     )
     emb.set_footer(
         icon_url="https://i.ibb.co/QXJrhmC/Atlantic-Council.png",
-        text=f"P&W bot for ANYONE, unlike SOME OTHER BOT  -  Requested by {ctx.author.name}"
+        text=f"P&W bot for ANYONE, unlike SOME OTHER BOT  -  Requested by The Atlantian Council"
     )
 
     await ctx.send(embed=emb)
