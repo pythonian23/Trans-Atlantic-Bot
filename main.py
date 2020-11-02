@@ -71,7 +71,7 @@ async def update_war():
     new = await req("wars?alliance_id=7536")
     print(f"Recieved Data - {time.time() - start_time} secs")
     if "success" in new.keys():
-        lastcheck = datetime.datetime.utcnow() - datetime.timedelta(hours=0, minutes=5)
+        lastcheck = datetime.datetime.utcnow() - datetime.timedelta(hours=0, minutes=6)
         wars = new["wars"]
         war_time = datetime.datetime.strptime(wars[0]["date"][:19], "%Y-%m-%dT%X")
         curr_war = 0
@@ -87,6 +87,7 @@ async def update_war():
                 defense_channel = await client.fetch_channel(717815077624872971)
 
             spec_war = await req(f"war/{current_war['warID']}", "/&")
+            current_war = spec_war["war"][0]
 
             attacker = await req(f"nation/id={spec_war['war'][0]['aggressor_id']}")
             defender = await req(f"nation/id={spec_war['war'][0]['defender_id']}")
@@ -146,8 +147,6 @@ async def update_war():
             if int(current_war["defender_resistance"]) > 75:
                 d_col = "yml"
             resist = f"**Attacker**```{a_col}\n---≡≡≡{''.join(['|' for _ in range(0, int(int(current_war['aggressor_resistance'])//2.5))]).center(40, ' ')}≡≡≡---\n```\n**Defender**```{d_col}\n---≡≡≡{''.join(['|' for _ in range(0, int(int(current_war['defender_resistance'])//2.5))]).center(40, ' ')}≡≡≡---\n```\n"
-
-            print(len(''.join(['|' for _ in range(int(current_war['defender_resistance']), 4)]).center(20, ' ')))
 
             links = f"\n⚔`War       `: https://politicsandwar.com/nation/war/timeline/war={current_war['war_id']}\n🗡`Attacker  `: https://politicsandwar.com/nation/id={attacker['nationid']}\n🛡`Defender  `: https://politicsandwar.com/nation/id={defender['nationid']}"
 
@@ -404,8 +403,6 @@ async def war(ctx, w_id):
     if int(current_war["defender_resistance"]) > 75:
         d_col = "yml"
     resist = f"**Attacker**```{a_col}\n---≡≡≡{''.join(['|' for _ in range(0, int(int(current_war['aggressor_resistance'])//2.5))]).center(40, ' ')}≡≡≡---\n```\n**Defender**```{d_col}\n---≡≡≡{''.join(['|' for _ in range(0, int(int(current_war['defender_resistance'])//2.5))]).center(40, ' ')}≡≡≡---\n```\n"
-
-    print(len(''.join(['|' for _ in range(int(current_war['defender_resistance']), 4)]).center(20, ' ')))
 
     links = f"\n⚔`War       `: https://politicsandwar.com/nation/war/timeline/war={current_war['war_id']}\n🗡`Attacker  `: https://politicsandwar.com/nation/id={attacker['nationid']}\n🛡`Defender  `: https://politicsandwar.com/nation/id={defender['nationid']}"
 
