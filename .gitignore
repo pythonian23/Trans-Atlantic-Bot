@@ -6,3 +6,4 @@ BOT/test.py
 .idea/modules.xml
 all_nations.json
 *.json
+users/users.csv

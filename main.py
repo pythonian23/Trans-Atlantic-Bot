@@ -9,11 +9,11 @@ import datetime
 import traceback
 import aiohttp
 import aiofiles
+import bs4
 import random
 import discord
 from discord.ext import commands
 import crypto_bot
-from math import *
 
 TOKEN = os.environ.get("TRANSATLANTICBOT")
 KEY = os.environ.get("PNWKEY")
@@ -43,24 +43,57 @@ morse = {'A': '.-', 'B': '-...',
 
 tab = "　" * 2
 
+userids = {}
 
-async def req(loc, key_provider=None):
+
+async def req(loc, key_provider=None, url="https://politicsandwar.com/api/", text=False):
     if key_provider is not None:
-        url = f"https://politicsandwar.com/api/{loc}{key_provider}key={KEY}"
+        url = f"{url}{loc}{key_provider}key={KEY}"
     elif "=" in loc:
-        url = f"https://politicsandwar.com/api/{loc}&key={KEY}"
+        url = f"{url}{loc}&key={KEY}"
     else:
-        url = f"https://politicsandwar.com/api/{loc}/?key={KEY}"
+        url = f"{url}{loc}/?key={KEY}"
 
     async with aiohttp.ClientSession() as session:
         async with session.get(url) as response:
             res = await response.text()
+            if text:
+                return res
             return json.loads(res)
 
 
 def dict_to_string(d):
     newline = "\n"
     return f'```yml\n{newline.join((f"{key}: {value}" for key, value in d.items()))}\n```'
+
+
+async def get_discord_id(n_id):
+    d_id = None
+    wbpg = bs4.BeautifulSoup(await req("", key_provider="#", text=True, url=f"https://politicsandwar.com/nation/id={n_id}"), "html.parser")
+    tbl = wbpg.find("table", class_="nationtable")
+    lnks = tbl.find_all("a")
+    for link in lnks:
+        if link.get("href") == "https://discord.gg/H9XnGxc":
+            d_id = link.text
+    return d_id
+
+
+def csv(rwa="r", *args):
+    if rwa == "r":
+        out = args[0].strip("\n").split("\n")
+        for line in range(len(out)):
+            if "," in out[line]:
+                out[line] = out[line].split(",")
+            else:
+                out[line] = [out[line]]
+        return out
+    elif rwa == "w" or rwa == "a":
+        dat = args[0]
+        txt = []
+        for line in dat:
+            txt.append(",".join(line))
+        txt = "\n".join(txt)
+        return txt+"\n"
 
 
 # update
@@ -207,11 +240,17 @@ client.loop.create_task(update())
 
 @client.event
 async def on_ready():
+    global userids
     await client.change_presence(
         status=discord.Status.online,
         activity=discord.Game(name="P&W")
     )
     print("---===≡≡≡BOT READY≡≡≡===---")
+
+    async with aiofiles.open("users/users.csv", mode="r") as f:
+        data = await f.read()
+        for id_set in csv("r", data):
+            userids[int(id_set[0])] = id_set[1]
 
 
 @client.event
@@ -267,7 +306,7 @@ async def on_typing(channel, user, _):
 
 
 @client.command()
-async def city(ctx, *c_id):
+async def city(ctx: commands.Context, *c_id):
     c_id = " ".join(c_id)
     if not c_id.isdigit():
         if c_id.startswith("http"):
@@ -303,8 +342,36 @@ async def city(ctx, *c_id):
     return
 
 
-@client.command()
-async def crypto(ctx, enc, text, iv, password, salt="Yenigma-2"):
+@client.command(name="register", aliases=["verify", "reg"])
+async def register(ctx: commands.Context, n_id):
+    global userids
+    user = await get_discord_id(n_id)
+    if ctx.author.name+"#"+ctx.author.discriminator == user:
+        if user in userids.keys():
+            text = "Already Registered."
+        else:
+            async with aiofiles.open("users/users.csv", mode="a") as f:
+                await f.write(csv("a", [[str(ctx.author.id), str(n_id)]]))
+                userids[int(ctx.author.id)] = str(n_id)
+                text = "Registration successful!"
+    else:
+        text = "Registration failed."
+
+    emb = discord.Embed(
+        title="Registration",
+        description=text,
+        color=discord.Color(0x00ff00)
+    )
+    emb.set_footer(
+        icon_url="https://i.ibb.co/QXJrhmC/Atlantic-Council.png",
+        text=f"P&W bot for ANYONE, unlike SOME OTHER BOT  -  Requested by {ctx.author.name}"
+    )
+
+    await ctx.send(embed=emb)
+
+
+@client.command(aliases=["crypt"])
+async def crypto(ctx: commands.Context, enc, text, iv, password, salt="Yenigma-2"):
     random.seed(iv)
     iv = random.getrandbits(256)
     random.seed()
@@ -327,16 +394,17 @@ async def crypto(ctx, enc, text, iv, password, salt="Yenigma-2"):
     )
 
     await ctx.send(embed=emb)
+    await ctx.message.delete()
     return
 
 
 @client.command()
-async def calc(ctx, *args):
+async def calc(ctx: commands.Context, *args):
     await ctx.send(eval(" ".join(args), {}, {}))
 
 
 @client.command()
-async def war(ctx, w_id):
+async def war(ctx: commands.Context, w_id):
     if w_id.startswith("http"):
         w_id = w_id[w_id.find("=") + 1:].rstrip("/")
     else:
@@ -422,12 +490,12 @@ async def war(ctx, w_id):
 
 
 @client.command(name="depo")
-async def depo(ctx, *args):
+async def depo(ctx: commands.Context, *args):
     await ctx.send("`!depo`? More like `!debt`")
 
 
 @client.command(name="help", aliases=["help_commands"])
-async def help_commands(ctx, spec_command=None):
+async def help_commands(ctx: commands.Context, spec_command=None):
     if spec_command is None:
         txts = []
         for key, val in command_dict.items():
