@@ -44,6 +44,7 @@ morse = {'A': '.-', 'B': '-...',
 tab = "　" * 2
 
 userids = {}
+nationids = {}
 
 
 async def req(loc, key_provider=None, url="https://politicsandwar.com/api/", text=False):
@@ -68,8 +69,10 @@ def dict_to_string(d):
 
 
 async def get_discord_id(n_id):
+    if not n_id.startswith("http"):
+        n_id = f"https://politicsandwar.com/nation/id={n_id}"
     d_id = None
-    wbpg = bs4.BeautifulSoup(await req("", key_provider="#", text=True, url=f"https://politicsandwar.com/nation/id={n_id}"), "html.parser")
+    wbpg = bs4.BeautifulSoup(await req("", key_provider="#", text=True, url=n_id), "html.parser")
     tbl = wbpg.find("table", class_="nationtable")
     lnks = tbl.find_all("a")
     for link in lnks:
@@ -250,7 +253,8 @@ async def on_ready():
     async with aiofiles.open("users/users.csv", mode="r") as f:
         data = await f.read()
         for id_set in csv("r", data):
-            userids[int(id_set[0])] = id_set[1]
+            userids[id_set[0]] = id_set[1]
+            nationids[id_set[1]] = id_set[0]
 
 
 @client.event
@@ -342,30 +346,37 @@ async def city(ctx: commands.Context, *c_id):
     return
 
 
-@client.command(name="register", aliases=["verify", "reg"])
+@client.command(name="register", aliases=["verify", "reg", "validate"])
 async def register(ctx: commands.Context, n_id):
-    global userids
-    user = await get_discord_id(n_id)
-    if ctx.author.name+"#"+ctx.author.discriminator == user:
-        if user in userids.keys():
-            text = "Already Registered."
-        else:
-            async with aiofiles.open("users/users.csv", mode="a") as f:
-                await f.write(csv("a", [[str(ctx.author.id), str(n_id)]]))
-                userids[int(ctx.author.id)] = str(n_id)
+    global userids, nationids
+    try:
+        user = await get_discord_id(n_id)
+        if ctx.author.name+"#"+ctx.author.discriminator == user:
+            if str(ctx.author.id) in userids.keys():
+                text = "Already Registered."
+            else:
+                async with aiofiles.open("users/users.csv", mode="a") as f:
+                    await f.write(csv("a", [[str(ctx.author.id), str(n_id)]]))
+                    userids[str(ctx.author.id)] = str(n_id)
+                    nationids[str(n_id)] = str(ctx.author.id)
                 text = "Registration successful!"
-    else:
-        text = "Registration failed."
+        else:
+            text = "Discord ID doesn't match. Please check again."
+    except AttributeError:
+        user = None
+        text = "Invalid nation ID/URL."
 
     emb = discord.Embed(
         title="Registration",
         description=text,
-        color=discord.Color(0x00ff00)
+        color=discord.Color(0x00ff00),
+        image="https://cdn0.iconfinder.com/data/icons/office-238/64/clipboard-note-register-shipping-files-512.png"
     )
     emb.set_footer(
         icon_url="https://i.ibb.co/QXJrhmC/Atlantic-Council.png",
         text=f"P&W bot for ANYONE, unlike SOME OTHER BOT  -  Requested by {ctx.author.name}"
     )
+    emb.set_thumbnail(url="https://cdn0.iconfinder.com/data/icons/office-238/64/clipboard-note-register-shipping-files-512.png")
 
     await ctx.send(embed=emb)
 

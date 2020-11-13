@@ -12,6 +12,7 @@ pyaes = "^1.6.1"
 pycryptodomex = "^3.9.8"
 flask = "^1.1.2"
 aiofiles = "^0.6.0"
+bs4 = "^0.0.1"
 
 [tool.poetry.dev-dependencies]
 
